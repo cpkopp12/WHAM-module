@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 
 
-class SampleGenerator_OneIon:
+class DataGenerator_OneIon:
     """
     Generate a data set which replicates a steered molecular dynamics 
         simulation through a given PMF lanscape for one ion pulled
@@ -82,6 +82,8 @@ class SampleGenerator_OneIon:
         #histogram array
         self.hist = np.zeros(np.size(self.binI))
         
+        
+        
     def biasPotential(self, x, mu):
         """
         
@@ -136,15 +138,88 @@ class SampleGenerator_OneIon:
         (a,b) = integrate.quad(func, xmin, xmax)
         
         return 1/a
+    
+    def normalDistribution(self, x, mu, sig):
+        
+        c = 1/(sig*np.sqrt(2*np.pi))
+               
+        return c*np.exp(-(1/2)*(((x-mu)**2)/(sig**2)))
+        
+    
+    def generateSample(self, rho):
+        """
+        
+        Parameters: rho (function(x), distribution function, can be normalized
+                         or unormalized)
+
+        Returns
+        -------
+        self.hist, histogram of sample
+
+        """
+        
+        #calculate norm constant of rho
+        A = self.normConstant(rho,self.xmn,self.xmx)
+        #calculate standard deviation for normal distribution from k
+        sig = 1/np.sqrt(self.k)
+        #number of samples per biasing step
+        n = floor(self.N/self.bStepNum)
+        
+        #loop over biasing potential steps
+        for mu in self.biasX:
+            print(mu)
+            #accepted sample counter i
+            i = 0
+            
+            #loop over accept-reject algorithm while i < n
+            while(i < n):
+                #test sample value
+                xt = r.normal(mu,sig)
+                #value of biasingPotential(x) * normalized rho(x)
+                f_xt = A*self.biasPotential(xt, mu)*rho(xt) 
+                #value of normal distribuition(xt)
+                n_xt = self.normalDistribution(xt, mu, sig)
+                
+                y = r.uniform(0,1)
+                
+                if y <= (f_xt/n_xt):
+                    if (xt < self.xmx) and (xt > self.xmn):
+                        i = i + 1
+                        
+                        histbinf = (xt/self.binSize)
+                        histbin = floor(histbinf)
+                        #hi is the histogram index that xt corresponds to
+                        hi = int(histbin)
+                        self.hist[hi] = self.hist[hi] + 1
+                        
+                        if (i == n/2):
+                            print('1/2 way')
+                        
+                        
+       
+
+        # make data
+        x = self.binI
+        y = self.hist
+        
+        # plot
+        fig, ax = plt.subplots()
+        
+        ax.plot(x, y, linewidth=2.0)
+        
+        plt.show()
+        
+        return self.hist
+                        
+                
         
         
         
         
         
 # %% Test Cell
-test = SampleGenerator_OneIon(0,3,30,10000,2,0.01)  
-(a,b)=integrate.quad(test.smoothFunc,0,3)
-print(a*test.normConstant(test.smoothFunc,0,3))
+test = DataGenerator_OneIon(0,3,60,10000000,16,0.001)  
+testhist = test.generateSample(test.smoothFunc)
         
 
         
