@@ -210,6 +210,19 @@ class DataGenerator_OneIon:
         plt.show()
         
         return self.hist
+    
+    
+    def writeToFile(self, funcUsed):
+        filename = "data-files/xmn{}_xmx{}_simNum{}_bs{}_k{}_n{}_{}.txt".format(self.xmn,
+                    self.xmx, self.bStepNum, self.binSize, self.k, self.N, funcUsed)
+        
+        with open(filename,'w') as myfile:
+            for x in self.bi:
+                myfile.write('{} '.format(self.hist[x]))
+                
+        myfile.close()
+        
+        return
                         
                 
         
