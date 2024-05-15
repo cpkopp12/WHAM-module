@@ -213,11 +213,11 @@ class DataGenerator_OneIon:
     
     
     def writeToFile(self, funcUsed):
-        filename = "data-files/xmn{}_xmx{}_simNum{}_bs{}_k{}_n{}_{}.txt".format(self.xmn,
-                    self.xmx, self.bStepNum, self.binSize, self.k, self.N, funcUsed)
+        filename = "data-files/xmn{}_xmx{}_bStepNum{}_binSize{}_k{}_N{}_{}.txt".format(self.xmn,self.xmx, self.bStepNum, self.binSize, 
+                            self.k, self.N, funcUsed)
         
         with open(filename,'w') as myfile:
-            for x in self.bi:
+            for x in self.binI:
                 myfile.write('{} '.format(self.hist[x]))
                 
         myfile.close()
@@ -231,8 +231,16 @@ class DataGenerator_OneIon:
         
         
 # %% Test Cell
-test = DataGenerator_OneIon(0,3,60,10000000,16,0.001)  
+xmin = 0
+xmax = 3
+bStepNum = 60
+N = 10000000
+k = 16
+binSize = 0.001
+
+test = DataGenerator_OneIon(xmin, xmax, bStepNum, N, k, binSize)  
 testhist = test.generateSample(test.smoothFunc)
+test.writeToFile('smoothFunc')
         
 
         
