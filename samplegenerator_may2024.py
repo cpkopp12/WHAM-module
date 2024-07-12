@@ -75,12 +75,14 @@ class DataGenerator_OneIon:
         
         #set up two arrays, coordinates of the center of biasing potential
         #for each step biasX, and the indicies for the biasing steps baisI
-        stepSize = (self.xmx-self.xmn)/(self.bStepNum + 1)
+        stepSize = (self.xmx-self.xmn)/(self.bStepNum)
         self.biasI = np.arange(0, self.bStepNum, dtype=int)
-        self.biasX = (self.biasI * stepSize) + stepSize
+        self.biasX = (self.biasI * stepSize) + stepSize/2
         
         #histogram array
         self.hist = np.zeros(np.size(self.binI))
+        #number of samples taken on hist for each sim i
+        self.Ni = np.zeros(np.size(self.biasI))
         
         
         
@@ -122,20 +124,20 @@ class DataGenerator_OneIon:
         -------
         value of the probabiltiy distribution function 
         rho(x) =
-            (20/21)*((((1/(1 + (1 - (x/2))^2))*((Sin[2 x]^2) + 2)/3 ) + 1/20)),
+            (1/(1+(1-x)^2)) * ((sin(2x)^2)+2)/3
         which is follows rho(x) <= 1
 
         """
-        return (20/21)*((((1/(1+(1-(x/2))**2))*((np.sin(2*x)**2)+2)/3)+1/20))
+        return (1/(1+(1-x)**2))*((np.sin(2*x)**2)+2/3)
         
         
-    def normConstant(self, func, xmin, xmax):
+    def normConstant(self, func):
         """
         calculate the normalization constant for probabilty function (func) 
         on xmin to xmax
         """
         
-        (a,b) = integrate.quad(func, xmin, xmax)
+        (a,b) = integrate.quad(func, self.xmn, self.xmx)
         
         return 1/a
     
@@ -158,33 +160,39 @@ class DataGenerator_OneIon:
 
         """
         
-        #calculate norm constant of rho
-        A = self.normConstant(rho,self.xmn,self.xmx)
         #calculate standard deviation for normal distribution from k
         sig = 1/np.sqrt(self.k)
         #number of samples per biasing step
         n = floor(self.N/self.bStepNum)
+        #sim index counter
+        j = -1
         
         #loop over biasing potential steps
         for mu in self.biasX:
+            
             print(mu)
             #accepted sample counter i
             i = 0
+            j = j + 1
             
             #loop over accept-reject algorithm while i < n
             while(i < n):
                 #test sample value
                 xt = r.normal(mu,sig)
                 #value of biasingPotential(x) * normalized rho(x)
-                f_xt = A*self.biasPotential(xt, mu)*rho(xt) 
+                f_xt = self.biasPotential(xt, mu)*rho(xt) 
                 #value of normal distribuition(xt)
                 n_xt = self.normalDistribution(xt, mu, sig)
                 
                 y = r.uniform(0,1)
                 
                 if y <= (f_xt/n_xt):
+                    i = i + 1
+                    if (i == n/2):
+                        print('1/2 way')
                     if (xt < self.xmx) and (xt > self.xmn):
-                        i = i + 1
+                        
+                        self.Ni[j] = self.Ni[j] + 1
                         
                         histbinf = (xt/self.binSize)
                         histbin = floor(histbinf)
@@ -192,8 +200,7 @@ class DataGenerator_OneIon:
                         hi = int(histbin)
                         self.hist[hi] = self.hist[hi] + 1
                         
-                        if (i == n/2):
-                            print('1/2 way')
+                        
                         
                         
        
@@ -209,7 +216,7 @@ class DataGenerator_OneIon:
         
         plt.show()
         
-        return self.hist
+        return (self.hist,self.Ni)
     
     
     def writeToFile(self, funcUsed):
@@ -217,8 +224,10 @@ class DataGenerator_OneIon:
                             self.k, self.N, funcUsed)
         
         with open(filename,'w') as myfile:
-            for x in self.binI:
-                myfile.write('{} '.format(self.hist[x]))
+            for x in self.hist:
+                myfile.write('{} '.format(x))
+            for i in self.Ni:
+                myfile.write('{} '.format(i))
                 
         myfile.close()
         
@@ -233,14 +242,15 @@ class DataGenerator_OneIon:
 # %% Test Cell
 xmin = 0
 xmax = 3
-bStepNum = 60
-N = 10000000
-k = 16
+bStepNum = 100
+N = 50000000
+k = 2
 binSize = 0.001
 
 test = DataGenerator_OneIon(xmin, xmax, bStepNum, N, k, binSize)  
-testhist = test.generateSample(test.smoothFunc)
+(testhist,testNi) = test.generateSample(test.smoothFunc)
 test.writeToFile('smoothFunc')
+print(testNi)
         
 
         
