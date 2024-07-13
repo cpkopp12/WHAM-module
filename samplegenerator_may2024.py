@@ -71,13 +71,13 @@ class DataGenerator_OneIon:
         #array with bin indexes = binI
         self.binI = np.arange(0,binNumber, dtype=int)
         #array with bin x coordinate values = binX
-        self.binX = (self.binI * self.binSize) + (self.binSize/2)
+        self.binX = (self.binI * self.binSize) 
         
         #set up two arrays, coordinates of the center of biasing potential
         #for each step biasX, and the indicies for the biasing steps baisI
         stepSize = (self.xmx-self.xmn)/(self.bStepNum)
         self.biasI = np.arange(0, self.bStepNum, dtype=int)
-        self.biasX = (self.biasI * stepSize) + stepSize/2
+        self.biasX = (self.biasI * stepSize) 
         
         #histogram array
         self.hist = np.zeros(np.size(self.binI))
@@ -242,10 +242,10 @@ class DataGenerator_OneIon:
 # %% Test Cell
 xmin = 0
 xmax = 3
-bStepNum = 100
+bStepNum = 120
 N = 50000000
-k = 2
-binSize = 0.001
+k = 49
+binSize = 0.0001
 
 test = DataGenerator_OneIon(xmin, xmax, bStepNum, N, k, binSize)  
 (testhist,testNi) = test.generateSample(test.smoothFunc)

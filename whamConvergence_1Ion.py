@@ -72,20 +72,20 @@ class WhamConvergence_1Ion:
         #array with bin indexes = binI
         self.binI = np.arange(0,binNumber, dtype=int)
         #array with bin x coordinate values = binX
-        self.binX = np.array((self.binI * self.binSize) + (self.binSize/2),
+        self.binX = np.array((self.binI * self.binSize),
                                dtype=float)
         
         #set up two arrays, coordinates of the center of biasing potential
         #for each step biasX, and the indicies for the biasing steps baisI
         stepSize = (self.xmx-self.xmn)/(self.bStepNum)
-        self.biasI = np.arange(0, self.bStepNum, dtype=int)
-        self.biasX = np.array((self.biasI * stepSize) + stepSize/2,
+        self.simI = np.arange(0, self.bStepNum, dtype=int)
+        self.biasX = np.array((self.simI * stepSize),
                                 dtype=float)
         
         #histogram array
         self.hist = np.zeros(np.size(self.binI))
         #number of samples per sim array
-        self.N_i = np.zeros(np.size(self.biasI))
+        self.N_i = np.zeros(np.size(self.simI))
         
         #need total number of samples per baising step
         #self.N_i = int(math.floor(self.N/self.bStepNum))
@@ -104,10 +104,10 @@ class WhamConvergence_1Ion:
         nlst = lst[np.size(self.hist):]
         for i in self.binI:
             self.hist[i] = float(histlst[i])
-        # for j in self.biasI:
+        # for j in self.simI:
         #     self.N_i[j] = nlst[j]
         
-        self.N_i += 50000000/100
+        self.N_i += self.N/self.bStepNum
            
             
     def printHistogramFromFile(self):
@@ -128,7 +128,7 @@ class WhamConvergence_1Ion:
     
     def biasingPotentialMatrix(self):
         """
-        calculate the biasing potential matrix, dim(size(biasI),size(binI)),
+        calculate the simIng potential matrix, dim(size(simI),size(binI)),
         the element i,l represents the value of the biasing potential from
         simulation step i at the x value in the center of bin l
 
@@ -138,11 +138,11 @@ class WhamConvergence_1Ion:
 
         """
         
-        c_i_l = np.zeros((np.size(self.biasI),np.size(self.binI)),
+        c_i_l = np.zeros((np.size(self.simI),np.size(self.binI)),
                                        dtype = float)
         
         #loop over bias index, get x coord for each
-        for i in self.biasI:
+        for i in self.simI:
             iIn = int(i)
             biasx = self.biasX[iIn]
             #loop over bin index, get x coord for each
@@ -165,29 +165,19 @@ class WhamConvergence_1Ion:
 
             Returns
             -------
-            (p0, f0, g0)
+            (f0, g0)
 
             """
-            p0 = np.zeros((np.size(self.binI)),dtype=float)
-            f0 = np.ones((np.size(self.biasI)),dtype=float)
-            g0 = np.zeros((np.size(self.biasI)),dtype=float)
+            #start by assuming every bin index is equally likely
+        
+            f0 = np.ones((np.size(self.simI)),dtype=float)
+            g0 = np.zeros((np.size(self.simI)),dtype=float)
             
-            # #equal elements N/bin number for p0
-            # for l in self.binI:
-            #     sum1 = 0
-            #     for i in self.baisI:
             
-            # p0 = p0+p0el
             
-            # #f0 will be the sum of 1/(p0(element)) over the number
-            # #of bins in each biasing step size
-            # stepSize = (self.xmx-self.xmn)/(self.bStepNum + 1)
-            # binsPerStep = stepSize/self.binSize
-            # psum = p0el*binsPerStep
-            # f0 = f0 + 1/psum
-            # g0 = g0 + np.log(f0)
             
-            return (p0, f0, g0)
+            
+            return (f0, g0)
         
         
         
@@ -207,7 +197,7 @@ class WhamConvergence_1Ion:
         sum2 = 0
         
         #first term
-        for i in self.biasI:
+        for i in self.simI:
             sum1 = sum1 + (self.N_i[i] * g[i])
         
         #second term
@@ -215,7 +205,7 @@ class WhamConvergence_1Ion:
             if(self.hist[l] != 0):
                 #initialize third sum
                 sum3 = 0
-                for j in self.biasI:
+                for j in self.simI:
                     sum3 = sum3 + (self.N_i[j] * self.c_i_l[j,l] * np.exp(g[j]))
                     
                 if(sum3 != 0):
@@ -242,9 +232,9 @@ class WhamConvergence_1Ion:
 
         """
         #initialize gradient vector
-        da_dgi = np.zeros(np.size(self.biasI))
+        da_dgi = np.zeros(np.size(self.simI))
         
-        for i in self.biasI:
+        for i in self.simI:
             sum1 = 0
             
             for l in self.binI:
@@ -252,7 +242,7 @@ class WhamConvergence_1Ion:
                 if(self.hist[l] != 0):
                     sum2 = 0
                     
-                    for j in self.biasI:
+                    for j in self.simI:
                         sum2 = sum2 + (self.N_i[j] * self.c_i_l[j,l] *
                                        np.exp(g[j]))
                     
@@ -319,6 +309,91 @@ class WhamConvergence_1Ion:
         
         return gk1
     
+    
+    #FUNCTIONS FOR WOLFE-POWELL ------------------------
+    def phi(self,g0,dgk,alpha):
+        """
+        
+
+        Parameters
+        ----------
+        g0 : TYPE
+            DESCRIPTION.
+        dgk : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        return self.calcA_g(g0+(alpha*dgk))
+    
+    def dphi(self,g0,dgk,alpha):
+        """
+        
+
+        Parameters
+        ----------
+        g0 : TYPE
+            DESCRIPTION.
+        dgk : TYPE
+            DESCRIPTION.
+        alpha : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        gl = g0 + (alpha*dgk)
+        da_gl = self.gradient_dA_dgi(gl)
+        
+        return np.inner(gl,da_gl)
+    
+    def armijo_WP_lsearch(self,gk,dA_gk,hk,alpha,tao,beta,lsil,ep,np):
+        """
+        
+
+        Parameters
+        ----------
+        gk : TYPE
+            DESCRIPTION.
+        dA_gk : TYPE
+            DESCRIPTION.
+        hk : TYPE
+            DESCRIPTION.
+        alpha : TYPE
+            DESCRIPTION.
+        tao : TYPE
+            DESCRIPTION.
+        beta : TYPE
+            DESCRIPTION.
+        lsil : TYPE
+            DESCRIPTION.
+        ep : TYPE
+            DESCRIPTION.
+        np : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        dgk = -1*np.dot(hk,dA_gk)
+        phi0 = self.calcA_g(gk)
+        dphi0 = np.inner(self.gradient_dA_dgi(dgk),dgk)
+        a = 0
+        b = alpha
+        phib = self.phi(gk, dgk, b)
+        l = 0
+        while (phib <= phi0 + beta * )
+        
+        
+    
     def inverseHessianPlusOne(self,delgk,deldA_gk,Hk):
         """
         
@@ -346,34 +421,20 @@ class WhamConvergence_1Ion:
         ip1 = (s - np.dot(Hk,y))
         op1 = np.outer(ip1,s)
         t1 = p*op1
-        
+        print('t1 ', t1)
         #term2
         ip2 = (s-np.dot(Hk,y))
         op2 = np.outer(s,ip2)
         t2 = p * op2
+        print('t2 ', t2)
         
         #term3
         ip3 = np.inner((s-np.dot(Hk,y)),y)
         op3 = np.outer(s,s)
         t3 = (p**2)*ip3*op3
+        print('t3 ', t3)
         
         Hk1 = Hk + t1 + t2 - t3
-
-        
-        
-        
-        # #term1
-        # d1 = np.inner(delgk,deldA_gk)
-        # n1 = np.outer(deldA_gk,deldA_gk)
-        # t1 = n1/d1
-        
-        # #term2
-        # op = np.outer(delgk,delgk)
-        # n2 = np.dot(Hk,np.dot(op,Hk))
-        # d2 = np.dot(delgk.T,np.dot(Hk,delgk))
-        # t2 = n2/d2
-        
-        # Hk1 = Hk + t1 - t2
         
         
         
@@ -405,7 +466,8 @@ class WhamConvergence_1Ion:
         """
         
         q = 0
-        (p0,f0,gk) = self.initialEstimates()
+        (f0, gk) = self.initialEstimates()
+        print('inital estimate = f0, g0: ', f0, gk)
         dA_gk = self.gradient_dA_dgi(gk)
         Hk = np.identity(np.size(dA_gk))
         while (q < bfgs_il): # and tol < bfgs_tol
@@ -427,13 +489,14 @@ class WhamConvergence_1Ion:
             print('hk', Hk)
             if(q%pcheck == 0):
                 f_gk = np.exp(gk)
+                print('fgk: ', f_gk)
                 rho = np.zeros(np.size(self.hist))
                 for l in self.binI:
                     sum1 = 0
-                    for i in self.biasI:
+                    for i in self.simI:
                         sum1 += self.N_i[i]*f_gk[i]*self.c_i_l[i][l]
                     rho[l] = self.hist[l]/sum1
-            
+                print(rho)
                 x = self.binI
                 y = rho
                 
@@ -469,19 +532,25 @@ class WhamConvergence_1Ion:
 
 xmin = 0
 xmax = 3
-bStepNum = 100
-N = 50000000
-k = 2
-binSize = 0.001
-fname = 'data-files/xmn0_xmx3_bStepNum100_binSize0.001_k2_N50000000_smoothFunc.txt'
+bStepNum = 90
+N = 5000000
+k = 36
+binSize = 0.0005
+fname = 'data-files/xmn0_xmx3_bStepNum90_binSize0.0005_k36_N5000000_smoothFunc.txt'
 
 test = WhamConvergence_1Ion(xmin, xmax, bStepNum, N, binSize, k, fname)
 
 print(test.N_i)
 
-test.oneIonWHAM_BFGS(200,0.01,2,0.5,0.01,500,2)
+test.oneIonWHAM_BFGS(200,0.01,1,0.9,0.5,500,2)
 
-
+# xmin = 0
+# xmax = 3
+# bStepNum = 100
+# N = 50000000
+# k = 9
+# binSize = 0.001
+# test.oneIonWHAM_BFGS(200,0.01,1,0.9,0.1,500,2)
         
         
         
