@@ -242,10 +242,10 @@ class DataGenerator_OneIon:
 # %% Test Cell
 xmin = 0
 xmax = 3
-bStepNum = 120
-N = 50000000
+bStepNum = 90
+N = 5000000
 k = 49
-binSize = 0.0001
+binSize = 0.005
 
 test = DataGenerator_OneIon(xmin, xmax, bStepNum, N, k, binSize)  
 (testhist,testNi) = test.generateSample(test.smoothFunc)

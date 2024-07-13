@@ -169,9 +169,18 @@ class WhamConvergence_1Ion:
 
             """
             #start by assuming every bin index is equally likely
-        
-            f0 = np.ones((np.size(self.simI)),dtype=float)
+            p0 = self.N/((self.xmx-self.xmn)/self.binSize)
+            f0 = np.zeros((np.size(self.simI)),dtype=float)
             g0 = np.zeros((np.size(self.simI)),dtype=float)
+            
+            for i in self.simI:
+                sum1 = 0
+                for l in self.binI:
+                    sum1 += p0*self.c_i_l[i][l]
+                f0[i] = 1/sum1
+                g0[i] = np.log(f0[i])
+                    
+                
             
             
             
@@ -353,7 +362,7 @@ class WhamConvergence_1Ion:
         
         return np.inner(gl,da_gl)
     
-    def armijo_WP_lsearch(self,gk,dA_gk,hk,alpha,tao,beta,lsil,ep,np):
+    def armijo_WP_lsearch(self,gk,dA_gk,hk,alpha,tao,beta,lsil,ep,nestp,ctol):
         """
         
 
@@ -377,6 +386,8 @@ class WhamConvergence_1Ion:
             DESCRIPTION.
         np : TYPE
             DESCRIPTION.
+        ctol : float
+            beta < ctol < 1
 
         Returns
         -------
@@ -388,9 +399,25 @@ class WhamConvergence_1Ion:
         dphi0 = np.inner(self.gradient_dA_dgi(dgk),dgk)
         a = 0
         b = alpha
-        phib = self.phi(gk, dgk, b)
         l = 0
-        while (phib <= phi0 + beta * )
+        while ((self.phi(gk,dgk,b) <= phi0 + (beta * b * dphi0)) 
+               and (self.dphi(gk, dgk, b) < ctol * dphi0)):
+            b = ep * b
+            l = l + 1
+        alpha = b
+        while (self.phi(gk,dgk,alpha) > phi0 + (beta * b * dphi0) 
+               or (self.dphi(gk, dgk, alpha) > ctol * dphi0)):
+            lendpoint = a+(nestp*(b-a))
+            uendpoint = b-(nestp*(b-a))
+            alpha = lendpoint + ((uendpoint-lendpoint)/2)
+            if self.phi(gk, dgk, alpha) >= phi0 + (beta * alpha * dphi0):
+                b = alpha 
+            else:
+                a = alpha 
+            l = l + 1
+            
+        return alpha
+        
         
         
     
@@ -534,9 +561,9 @@ xmin = 0
 xmax = 3
 bStepNum = 90
 N = 5000000
-k = 36
-binSize = 0.0005
-fname = 'data-files/xmn0_xmx3_bStepNum90_binSize0.0005_k36_N5000000_smoothFunc.txt'
+k = 49
+binSize = 0.005
+fname = 'data-files/xmn0_xmx3_bStepNum90_binSize0.005_k49_N5000000_smoothFunc.txt'
 
 test = WhamConvergence_1Ion(xmin, xmax, bStepNum, N, binSize, k, fname)
 
